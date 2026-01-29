@@ -57,41 +57,5 @@ public static class CheckModule
 
         return cleaned;
     }
-
-    public static bool CheckeFilePath(string? filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath))
-        {
-            return false;
-        }
-
-        try
-        {
-            if (!Path.IsPathRooted(filePath))
-            {
-                return false;
-            }
-
-            return File.Exists(filePath);
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    public static bool CheckeFileFormat(string filePath)
-    {
-        try
-        {
-            var content = File.ReadAllText(filePath);
-            var text = CheckeText(content);
-            return !string.IsNullOrEmpty(text);
-        }
-        catch
-        {
-            return false;
-        }
-    }
 }
 

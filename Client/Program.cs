@@ -128,7 +128,7 @@ class Program
         {
             var payload = new { login, password };
             var response = await _httpClientModule!.ExecuteWithRetryAsync(() =>
-                CreateJsonRequest(HttpMethod.Post, "/api/login", payload));
+                CreateJsonRequest(HttpMethod.Post, "/login", payload));
             
             var responseContent = await response.Content.ReadAsStringAsync();
 
@@ -195,7 +195,7 @@ class Program
         {
             var payload = new { login, password };
             var response = await _httpClientModule!.ExecuteWithRetryAsync(() =>
-                CreateJsonRequest(HttpMethod.Post, "/api/signup", payload));
+                CreateJsonRequest(HttpMethod.Post, "/signup", payload));
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -237,7 +237,7 @@ class Program
         try
         {
             var response = await _httpClientModule!.ExecuteWithRetryAsync(() =>
-                new HttpRequestMessage(HttpMethod.Get, "/api/info"));
+                new HttpRequestMessage(HttpMethod.Get, "/info"));
             var responseContent = await response.Content.ReadAsStringAsync();
             
             if (response.IsSuccessStatusCode)
@@ -375,7 +375,7 @@ class Program
             {
                 var payload = new { length };
                 var response = await _httpClientModule!.ExecuteWithRetryAsync(() =>
-                    CreateJsonRequest(HttpMethod.Post, "/api/generate-key", payload));
+                    CreateJsonRequest(HttpMethod.Post, "/generate-key", payload));
                 var responseContent = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
@@ -416,7 +416,7 @@ class Program
         {
             var payload = new { text = CheckedText, key };
             var response = await _httpClientModule!.ExecuteWithRetryAsync(() =>
-                CreateJsonRequest(HttpMethod.Post, "/api/encrypt", payload));
+                CreateJsonRequest(HttpMethod.Post, "/encrypt", payload));
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -501,7 +501,7 @@ class Program
         {
             var payload = new { cipherText = CheckedCipherText, key };
             var response = await _httpClientModule!.ExecuteWithRetryAsync(() =>
-                CreateJsonRequest(HttpMethod.Post, "/api/decrypt", payload));
+                CreateJsonRequest(HttpMethod.Post, "/decrypt", payload));
             var responseContent = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -593,7 +593,6 @@ class Program
         Console.WriteLine("───────────────────────────────────────────────────────────");
         Console.WriteLine("Выберите источник истории:");
         Console.WriteLine("1. Локальные логи (сохраненные в файлы)");
-        Console.WriteLine("2. История с сервера (через API)");
         Console.Write("Выбор: ");
         
         var sourceChoice = Console.ReadLine()?.Trim();
@@ -603,10 +602,7 @@ class Program
         {
             await ViewLocalLogs();
         }
-        else if (sourceChoice == "2")
-        {
-            await ViewServerLogs();
-        }
+            //await ViewServerLogs();
         else
         {
             Console.WriteLine("Неверный выбор.");
@@ -653,106 +649,6 @@ class Program
         else
         {
             Console.WriteLine("Неверный выбор.");
-        }
-    }
-
-    static async Task ViewServerLogs()
-    {
-        try
-        {
-            Console.WriteLine("Фильтры для просмотра истории:");
-            Console.Write("Начальная дата (yyyy-MM-dd, Enter - пропустить): ");
-            var fromInput = Console.ReadLine()?.Trim();
-            DateTime? from = null;
-            if (!string.IsNullOrEmpty(fromInput) && DateTime.TryParse(fromInput, out var fromDate))
-            {
-                from = fromDate;
-            }
-
-            Console.Write("Конечная дата (yyyy-MM-dd, Enter - пропустить): ");
-            var toInput = Console.ReadLine()?.Trim();
-            DateTime? to = null;
-            if (!string.IsNullOrEmpty(toInput) && DateTime.TryParse(toInput, out var toDate))
-            {
-                to = toDate;
-            }
-
-            Console.Write("Уровень лога (INFO, WARNING, ERROR, Enter - все): ");
-            var levelInput = Console.ReadLine()?.Trim();
-
-            var url = "/api/logs?";
-            if (from.HasValue)
-                url += $"from={from.Value:yyyy-MM-ddTHH:mm:ssZ}&";
-            if (to.HasValue)
-                url += $"to={to.Value:yyyy-MM-ddTHH:mm:ssZ}&";
-            if (!string.IsNullOrEmpty(levelInput))
-                url += $"level={levelInput}&";
-            
-            url = url.TrimEnd('&', '?');
-
-            var response = await _httpClientModule!.ExecuteWithRetryAsync(() =>
-                new HttpRequestMessage(HttpMethod.Get, url));
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (response.IsSuccessStatusCode)
-            {
-                if (!TryParseJsonElement(responseContent, out var json) ||
-                    !json.TryGetProperty("Count", out var cntProp))
-                {
-                    Console.WriteLine("Ответ сервера пуст или некорректен.");
-                    return;
-                }
-
-                var count = cntProp.GetInt32();
-                var logs = json.GetProperty("Logs");
-
-                Console.WriteLine($"\nНайдено записей на сервере: {count}");
-                Console.WriteLine("───────────────────────────────────────────────────────────");
-
-                foreach (var log in logs.EnumerateArray())
-                {
-                    var timestamp = log.GetProperty("Timestamp").GetDateTime();
-                    var level = log.GetProperty("Level").GetString();
-                    var message = log.GetProperty("Message").GetString();
-                    var userId = log.TryGetProperty("UserId", out var uid) ? uid.GetString() : "unknown";
-
-                    Console.WriteLine($"Дата и время: {timestamp:yyyy-MM-dd HH:mm:ss}");
-                    Console.WriteLine($"Уровень: {level}");
-                    Console.WriteLine($"Пользователь: {userId}");
-                    Console.WriteLine($"Сообщение: {message}");
-
-                    if (log.TryGetProperty("InputText", out var inputText) && inputText.ValueKind != JsonValueKind.Null)
-                    {
-                        Console.WriteLine($"Исходный текст: {inputText.GetString()}");
-                    }
-
-                    if (log.TryGetProperty("OutputText", out var outputText) && outputText.ValueKind != JsonValueKind.Null)
-                    {
-                        Console.WriteLine($"Результат: {outputText.GetString()}");
-                    }
-
-                    if (log.TryGetProperty("Key", out var key) && key.ValueKind != JsonValueKind.Null)
-                    {
-                        Console.WriteLine($"Ключ: {key.GetString()}");
-                    }
-
-                    if (log.TryGetProperty("OperationType", out var opType) && opType.ValueKind != JsonValueKind.Null)
-                    {
-                        Console.WriteLine($"Тип операции: {opType.GetString()}");
-                    }
-
-                    Console.WriteLine("───────────────────────────────────────────────────────────");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"Ошибка получения истории (HTTP {(int)response.StatusCode}): {DescribeResponseText(responseContent)}");
-            }
-        }
-        catch (Exception ex)
-        {
-            LogError($"Ошибка при получении истории с сервера: {ex.Message}", ex);
-            Console.WriteLine($"Ошибка подключения к серверу: {ex.Message}");
         }
     }
 

@@ -83,11 +83,6 @@ public class HttpClientModule
         }
     }
 
-    public void ClearAuthCookie()
-    {
-        _httpClient.DefaultRequestHeaders.Remove("Cookie");
-    }
-
     public static string? ExtractCookie(HttpResponseMessage response)
     {
         if (response.Headers.Contains("Set-Cookie"))
@@ -104,9 +99,6 @@ public class HttpClientModule
         return null;
     }
 
-    public void Dispose()
-    {
-        _httpClient?.Dispose();
-    }
+
 }
 

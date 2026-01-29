@@ -70,14 +70,5 @@ public static class EncryptionModule
         }
     }
 
-    public static string EncryptForTransmission(string data)
-    {
-        return Encrypt(data);
-    }
-
-    public static string DecryptFromTransmission(string encryptedData)
-    {
-        return Decrypt(encryptedData);
-    }
 }
 

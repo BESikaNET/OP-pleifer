@@ -25,7 +25,18 @@ builder.Services.AddCors(options =>
     });
 });
 
-
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Playfair Cipher Service API",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "Playfair Cipher Service",
+        }
+    });
+});
 
 // Настройка модулей
 var dbPath = builder.Configuration["Database:Path"] ?? "./data/users.db";
@@ -42,7 +53,14 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Playfair Cipher Service API");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "Playfair Cipher Service API Documentation";
+    c.DefaultModelsExpandDepth(-1);
+});
 
 if (!dbManager.ConnectToDB(dbPath))
 {
@@ -53,7 +71,12 @@ if (!dbManager.ConnectToDB(dbPath))
 
 Console.WriteLine("Server started successfully");
 
-app.MapGet("/", () => Results.Ok("Сервер пирамидальной сортировки готов к работе."));
+app.MapGet("/", () => 
+{
+    var swaggerUrl = "/swagger";
+    return $"Playfair Cipher Service API\n\n" +
+           $"API Documentation: {swaggerUrl}\n";
+});
 
 app.MapGet("/info", () =>
 {
@@ -165,7 +188,27 @@ app.MapPost("/generate-key", [Authorize] ([FromBody] GenerateKeyRequest? request
     return Results.Ok(new { key, length });
 });
 
-
+app.MapGet("/logs", [Authorize] (HttpContext context) =>
+{
+    var username = context.User.Identity?.Name ?? "unknown";
+    
+    try
+    {
+        Console.WriteLine($"INFO: User {username} attempted to access logs (functionality removed)");
+        
+        return Results.Ok(new
+        {
+            Message = "Log functionality has been removed from this version",
+            Count = 0,
+            Logs = new List<object>()
+        });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"ERROR: Error processing log request by user {username}: {ex.Message}");
+        return Results.Problem($"Error processing log request: {ex.Message}");
+    }
+});
 
 app.MapPost("/login", async ([FromBody] LoginRequest request, [FromServices] DBManager db, HttpContext context) =>
 {
